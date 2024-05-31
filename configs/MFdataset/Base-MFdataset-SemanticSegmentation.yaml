@@ -1,7 +1,7 @@
 DATASETS:
   NAME: "MFdataset"
   DIR : "./datasets/MFdataset/" 
-  IMS_PER_BATCH: &b 14
+  IMS_PER_BATCH: &b 1 # Original 14
   WORKERS_PER_GPU: 4
 MODEL:
   META_ARCHITECTURE: "RGBTMaskFormer"

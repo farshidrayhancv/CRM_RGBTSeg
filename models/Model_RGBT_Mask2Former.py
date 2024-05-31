@@ -13,7 +13,7 @@ from pytorch_lightning import LightningModule
 from sklearn.metrics import confusion_matrix
 import torchvision.utils as vutils
 
-from util.util import compute_results, get_palette_MF, get_palette_PST, get_palette_KP, visualize_pred
+from util.util import compute_results, get_palette_MF, get_palette_PST, get_palette_KP, visualize_pred, get_palette_UCLPHY
 from .registry import MODELS
 from models.mask2former import RGBTMaskFormer
 from detectron2.projects.deeplab import build_lr_scheduler
@@ -36,6 +36,9 @@ class Model_RGBT_Mask2Former(LightningModule):
         if self.num_classes == 9 : 
             self.label_list = ["unlabeled", "car", "person", "bike", "curve", "car_stop", "guardrail", "color_cone", "bump"]
             self.palette = get_palette_MF()
+        elif self.num_classes == 3 : 
+            self.label_list = ["unlabeled", "cloth", "damage"]
+            self.palette = get_palette_UCLPHY()
         elif self.num_classes == 5 : 
             self.label_list = ["unlabeled", "fire_extinhuisher", "backpack", "hand_drill", "rescue_randy"]
             self.palette = get_palette_PST()

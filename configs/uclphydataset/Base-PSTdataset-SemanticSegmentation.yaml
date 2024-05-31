@@ -1,8 +1,8 @@
 DATASETS:
-  NAME: "PSTdataset"  
-  DIR : "./datasets/PSTdataset/"
-  IMS_PER_BATCH: &b 1
-  WORKERS_PER_GPU: 4
+  NAME: "uclphydataset"  
+  DIR : "./datasets/uclphydataset/"
+  IMS_PER_BATCH: &b 1 # orig 12
+  WORKERS_PER_GPU: 8 # orig 4
 MODEL:
   META_ARCHITECTURE: "RGBTMaskFormer"
   BACKBONE:
@@ -23,7 +23,7 @@ MODEL:
   SEM_SEG_HEAD:
     NAME: "MaskFormerHead"
     IGNORE_VALUE: 255
-    NUM_CLASSES: 5
+    NUM_CLASSES: 3
     LOSS_WEIGHT: 1.0
     CONVS_DIM: 256
     MASK_DIM: 256
@@ -62,15 +62,15 @@ MODEL:
       PANOPTIC_ON: False
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
-  PIXEL_MEAN: [123.675, 116.280, 103.530, 127]
-  PIXEL_STD: [58.395, 57.120, 57.375, 60]
+  PIXEL_MEAN: [129.755, 129.721, 126.775, 0.3151]
+  PIXEL_STD: [73.685, 61.994, 55.524, 0.1246]
   CRMLOSS:
     MWS_WEIGHT: 1.0
     SDC_WEIGHT: 1.0
     SDN_WEIGHT: 1.0
 SOLVER:
   IMS_PER_BATCH: *b
-  BASE_LR: 0.0001
+  BASE_LR: 0.0001 # orig 0.0001
   MAX_ITER: 350000
   WARMUP_FACTOR: 1.0
   WARMUP_ITERS: 0
@@ -89,7 +89,7 @@ INPUT:
   MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 720) for x in range(5, 21)]"]
   MIN_SIZE_TRAIN_SAMPLING: "choice"
   MIN_SIZE_TEST: 480
-  MAX_SIZE_TRAIN: 1920
+  MAX_SIZE_TRAIN: 1080
   MAX_SIZE_TEST: 960
   CROP:
     ENABLED: True
@@ -108,6 +108,6 @@ INPUT:
   FORMAT: "RGBT"
   DATASET_MAPPER_NAME: "mask_former_semantic"
 SAVE:
-  DIR_ROOT: "./results_PST"
+  DIR_ROOT: "./results_UclPhy"
   DIR_NAME: "RGBT_former"
   FLAG_VIS_GT: True

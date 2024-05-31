@@ -75,6 +75,7 @@ class PST_dataset(Dataset):
 
         sem_seg_gt = self.read_image(name, 'labels').astype("double")
 
+
         # Data Augmentation
         if self.split == 'train':
             aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
@@ -125,6 +126,8 @@ class PST_dataset(Dataset):
                 masks = BitMasks(
                     torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in masks])
                 )
+                # 
+                # print(masks.tensor.shape)
                 instances.gt_masks = masks.tensor
 
             result["instances"] = instances

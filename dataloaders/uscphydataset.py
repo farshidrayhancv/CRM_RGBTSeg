@@ -1,12 +1,11 @@
 # Written by Ukcheol Shin, Jan. 24, 2023 using the following two repositories.
-# RTFNet: https://github.com/yuxiangsun/RTFNet
+# PST900: https://github.com/ShreyasSkandanS/pst900_thermal_rgb
 # Mask2Former: https://github.com/facebookresearch/Mask2Former
 
 import cv2
 import numpy as np
 import os, torch
-from PIL import ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+from skimage.transform import resize
 from imageio import imread
 from torch.nn import functional as F
 from torch.utils.data.dataset import Dataset
@@ -14,20 +13,21 @@ from detectron2.structures import BitMasks, Instances
 from detectron2.data import transforms as T
 from .augmentation import ColorAugSSDTransform, MaskGenerator
 
-class MF_dataset(Dataset):
+class Uclphy_dataset(Dataset):
 
     def __init__(self, data_dir, cfg, split):
-        super(MF_dataset, self).__init__()
+        super(Uclphy_dataset, self).__init__()
 
-        assert split in ['train', 'val', 'test', 'test_day', 'test_night', 'val_test'], \
-            'split must be "train"|"val"|"test"|"test_day"|"test_night"|"val_test"' 
+        assert split in ['train', 'val', 'test'], \
+            'split must be "train"|"val"|"test"' 
 
-        with open(os.path.join(data_dir, split+'.txt'), 'r') as f:
-            self.names = [name.strip() for name in f.readlines()]
+        # read dataset list, all files have the same name across 'rgb', 'label', 'thermal', 'depth' folders
+        self.data_list = os.listdir(os.path.join(data_dir, 'rgb')) 
+        self.data_list.sort()
 
-        self.data_dir  = data_dir
+        self.data_dir  = os.path.join(data_dir, split)
         self.split     = split
-        self.n_data    = len(self.names)
+        self.n_data    = len(self.data_list)
         self.size_divisibility = -1
         self.ignore_label = cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE
 
@@ -61,16 +61,56 @@ class MF_dataset(Dataset):
                                                 )
         else:
             self.mask_generator = None 
-
+            
     def read_image(self, name, folder):
-        file_path = os.path.join(self.data_dir, '%s/%s.png' % (folder, name))
+        file_path = os.path.join(self.data_dir, '%s/%s' % (folder, name))
         image     = imread(file_path).astype('float32')
         return image
 
     def __getitem__(self, index):
-        name  = self.names[index]
-        image = self.read_image(name, 'images_modified_t10').astype('float32') # images_modified/images for updated
-        sem_seg_gt = self.read_image(name, 'labels').astype("double")
+        name  = self.data_list[index]
+        image_rgb = self.read_image(name, 'rgb')
+        name = name.replace('jpg', 'npy')
+        name = name.replace('png', 'npy')
+        name = name.replace('bmp', 'npy')
+        
+        
+        # print(name)
+        thermal = np.load(self.data_dir + '/thermal_modified/' + name )
+        # thermal = (thermal - thermal.min()) / (thermal.max() -thermal.min())
+        
+
+        # name = name.replace('npy', 'jpg')
+        name = name.replace('npy', 'png')
+
+        image_rgb = resize(image_rgb, (512, 640, 3)).astype("float32")
+
+        # print( name, image_rgb.shape, type(image_rgb), thermal.shape, type(thermal))
+
+        image_thr = np.expand_dims(thermal, axis=2)
+        image = np.concatenate((image_rgb,image_thr),axis=2).astype("float32")
+        # depth = self.read_image(name, 'depth')
+
+        sem_seg_gt = self.read_image(name, 'labels').astype("float32")
+        sem_seg_gt = resize(sem_seg_gt, (512, 640)).astype("float32")
+
+        color_to_integer = {(0, 0, 0): 0, (0, 0, 255): 1, (255, 0, 0): 2}
+    
+        # Replace RGB values with corresponding unique integers
+        sem_seg_gt = np.array([color_to_integer.get(tuple(color), 0) for color in sem_seg_gt.reshape(-1, 3)]).reshape(sem_seg_gt.shape[:2])
+    
+
+        # unique_colors, color_indices = np.unique(sem_seg_gt.reshape(-1, 3), axis=0, return_inverse=True)
+    
+        # # Create a mapping dictionary from unique colors to unique integers
+        # color_to_integer = {tuple(color): index for index, color in enumerate(unique_colors)}
+    
+        # # Replace RGB values with corresponding unique integers
+        # sem_seg_gt = np.array([color_to_integer[tuple(color)] for color in sem_seg_gt.reshape(-1, 3)]).reshape(sem_seg_gt.shape[:2]).astype("float32")
+    
+
+
+        # print(image_rgb.shape, image_thr.shape, image.shape)
 
         # Data Augmentation
         if self.split == 'train':
@@ -80,8 +120,8 @@ class MF_dataset(Dataset):
             sem_seg_gt = aug_input.sem_seg
 
         # Pad image and segmentation label here!
-        image      = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1))) 
-        sem_seg_gt = torch.as_tensor(sem_seg_gt.astype("long"))
+        image      = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+        sem_seg_gt = torch.as_tensor(sem_seg_gt.astype("float32"))
 
         if self.size_divisibility > 0:
             image_size = (image.shape[-2], image.shape[-1])
@@ -102,7 +142,7 @@ class MF_dataset(Dataset):
         result["image"] = image
         result["sem_seg_gt"] = sem_seg_gt.long()
 
-        # Prepare per-category binary masks
+        # # Prepare per-category binary masks
         if sem_seg_gt is not None:
             sem_seg_gt = sem_seg_gt.numpy()
             instances = Instances(image_shape)
@@ -114,17 +154,30 @@ class MF_dataset(Dataset):
             masks = []
             for class_id in classes:
                 masks.append(sem_seg_gt == class_id)
-
+            
             if len(masks) == 0:
                 # Some image does not have annotation (all ignored)
                 instances.gt_masks = torch.zeros((0, sem_seg_gt.shape[-2], sem_seg_gt.shape[-1]))
             else:
+
+                # for x in masks:
+                #     x = x.copy()
+                #     x = np.ascontiguousarray(x)
+                #     x = torch.from_numpy(x)
+                #     print(x.shape)
+                
                 masks = BitMasks(
                     torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in masks])
                 )
+                    
+                # print(masks.tensor.type)
                 instances.gt_masks = masks.tensor
 
+            
+
             result["instances"] = instances
+
+            
 
         # Prepare mask
         if (self.split == 'train') and (self.mask_generator is not None):

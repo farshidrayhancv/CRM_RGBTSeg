@@ -29,6 +29,14 @@ def get_palette_PST():
     palette    = np.array([unlabelled, fire_extinhuisher, backpack, hand_drill, rescue_randy]).astype(np.uint8)
     return palette
 
+def get_palette_UCLPHY():
+    unlabelled          = [0,0,0]
+    cloth               = [0,0,255]
+    damage              = [255,0, 0]
+    palette    = np.array([unlabelled, cloth, damage]).astype(np.uint8)
+    return palette
+
+
 def get_palette_KP():
     road = [128, 64, 128]
     sidewalk = [244, 35, 232]

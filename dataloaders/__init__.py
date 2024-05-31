@@ -4,6 +4,7 @@
 from .MF_dataset import MF_dataset
 from .KP_dataset import KP_dataset
 from .PST_dataset import PST_dataset
+from .uscphydataset import Uclphy_dataset
 from .augmentation import *
 
 def build_dataset(cfg):
@@ -29,6 +30,10 @@ def build_dataset(cfg):
         dataset['train'] = PST_dataset(cfg.DATASETS.DIR, cfg, split='train')
         dataset['val']   = PST_dataset(cfg.DATASETS.DIR, cfg, split='test')
         dataset['test']  = PST_dataset(cfg.DATASETS.DIR, cfg, split='test')
+    elif dataset_name == 'uclphydataset': # PST900 dataset doesn't has validation set
+        dataset['train'] = Uclphy_dataset(cfg.DATASETS.DIR, cfg, split='train')
+        dataset['val']   = Uclphy_dataset(cfg.DATASETS.DIR, cfg, split='train')
+        dataset['test']  = Uclphy_dataset(cfg.DATASETS.DIR, cfg, split='test')
     else:
         raise ValueError('Unknown dataset type: {}.'.format(dataset_name))
 
