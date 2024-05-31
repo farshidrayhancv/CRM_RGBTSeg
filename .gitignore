@@ -1,8 +1,16 @@
+
 # User defined
 checkpoints
 *.pkl
 *.pth
 *.zip
+*.png
+*.bmp
+*.jpg
+*.npy
+*.xml
+*.ink
+*.txt
 datasets/MFdataset
 datasets/KPdataset
 datasets/PSTdataset
