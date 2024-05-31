@@ -70,13 +70,13 @@ class Uclphy_dataset(Dataset):
     def __getitem__(self, index):
         name  = self.data_list[index]
         image_rgb = self.read_image(name, 'rgb')
-        name = name.replace('jpg', 'npy')
-        name = name.replace('png', 'npy')
-        name = name.replace('bmp', 'npy')
+        name = name.replace('jpg', 'png')
+        name = name.replace('png', 'png')
+        name = name.replace('bmp', 'png')
         
         
         # print(name)
-        thermal = np.load(self.data_dir + '/thermal_modified/' + name )
+        thermal = imread(self.data_dir + '/thermal_modified/' + name).astype('float32') 
         # thermal = (thermal - thermal.min()) / (thermal.max() -thermal.min())
         
 
